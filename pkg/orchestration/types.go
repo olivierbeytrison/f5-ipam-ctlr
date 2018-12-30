@@ -51,6 +51,7 @@ type (
 		Namespace string
 		Hosts     []string
 		Netview   string // used for non-shared IP group
+		Dnsiew    string // do not mix netview and dnsview
 		Cidr      string // used for non-shared IP group
 	}
 )
