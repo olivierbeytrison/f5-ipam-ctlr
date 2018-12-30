@@ -43,6 +43,7 @@ import (
 const ipamWatchAnnotation = "ipam.f5.com/ip-allocation"
 const groupAnnotation = "ipam.f5.com/group"
 const netviewAnnotation = "ipam.f5.com/infoblox-netview"
+const dnsviewAnnotation = "ipam.f5.com/infoblox-dnsview"
 const cidrAnnotation = "ipam.f5.com/network-cidr"
 const hostnameAnnotation = "ipam.f5.com/hostname"
 const ipAnnotation = "virtual-server.f5.com/ip"
@@ -617,7 +618,7 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 				continue
 			}
 
-			var host, netview, cidr string
+			var host, netview, cidr, dnsview string
 			var ok bool
 			if cidr, ok = cm.ObjectMeta.Annotations[cidrAnnotation]; !ok {
 				log.Errorf(
@@ -627,6 +628,11 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 			if netview, ok = cm.ObjectMeta.Annotations[netviewAnnotation]; !ok && IPAM == "infoblox" {
 				log.Errorf(
 					"ConfigMap '%v' does not have required Infoblox netview annotation.", rKey.Name)
+				return nil
+			}
+			if dnsview, ok = cm.ObjectMeta.Annotations[dnsviewAnnotation]; !ok && IPAM == "infoblox" {
+				log.Errorf(
+					"ConfigMap '%v' does not have required Infoblox dnsview annotation.", rKey.Name)
 				return nil
 			}
 			if host, ok = cm.ObjectMeta.Annotations[hostnameAnnotation]; !ok {
@@ -641,6 +647,7 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 				GroupKey{
 					Name:    "",
 					Netview: netview,
+					Dnsview: dnsview,
 					Cidr:    cidr,
 				},
 				"ConfigMap",
@@ -663,7 +670,7 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 			if ing.ObjectMeta.Namespace != rKey.Namespace || ing.ObjectMeta.Name != rKey.Name {
 				continue
 			}
-			var val, groupName, netview, cidr string
+			var val, groupName, netview, dnsview, cidr string
 			var ok bool
 			if val, ok = ing.ObjectMeta.Annotations[groupAnnotation]; ok {
 				groupName = val
@@ -679,7 +686,13 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 					"Ingress '%v' does not have required Infoblox netview annotation.", rKey.Name)
 				return nil
 			}
-
+			
+			if dnsview, ok = cm.ObjectMeta.Annotations[dnsviewAnnotation]; !ok && IPAM == "infoblox" {
+				log.Errorf(
+					"ConfigMap '%v' does not have required Infoblox dnsview annotation.", rKey.Name)
+				return nil
+			}
+			
 			if ing.Spec.Rules == nil { // single-service
 				// Get the hostname from the annotation
 				if host, ok := ing.ObjectMeta.Annotations[hostnameAnnotation]; ok {
@@ -688,6 +701,7 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 						GroupKey{
 							Name:    groupName,
 							Netview: netview,
+							Dnsview: dnsview,
 							Cidr:    cidr,
 						},
 						"Ingress",
@@ -709,6 +723,7 @@ func (client *K8sClient) syncResource(rKey resourceKey) error {
 					GroupKey{
 						Name:    groupName,
 						Netview: netview,
+						Dnsview: dnsview,
 						Cidr:    cidr,
 					},
 					"Ingress",
