@@ -41,6 +41,7 @@ type (
 	GroupKey struct {
 		Name    string
 		Netview string
+		Dnsview string
 		Cidr    string
 	}
 
